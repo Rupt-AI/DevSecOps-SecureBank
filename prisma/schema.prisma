@@ -1,0 +1,142 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CUSTOMER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum AccountType {
+  SAVINGS
+  CURRENT
+}
+
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum NotificationType {
+  EMAIL
+  SMS
+  PUSH
+}
+
+model User {
+  id            String         @id @default(uuid())
+  firstName     String
+  lastName      String
+  email         String         @unique
+  password      String
+  role          UserRole       @default(CUSTOMER)
+  isVerified    Boolean        @default(false)
+  isDeleted     Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  accounts      Account[]
+  notifications Notification[]
+  refreshTokens RefreshToken[]
+  auditLogs     AuditLog[]
+
+  @@index([email])
+}
+
+model Account {
+  id                   String        @id @default(uuid())
+  accountNumber        String        @unique
+  accountType          AccountType
+  status               AccountStatus @default(ACTIVE)
+  balance              Decimal       @db.Decimal(18, 2)
+  userId               String
+  owner                User          @relation(fields: [userId], references: [id])
+  outgoingTransactions Transaction[] @relation("Sender")
+  incomingTransactions Transaction[] @relation("Receiver")
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  @@index([accountNumber])
+}
+
+model Transaction {
+  id                String            @id @default(uuid())
+  senderAccountId   String
+  receiverAccountId String
+  amount            Decimal           @db.Decimal(18, 2)
+  description       String?
+  status            TransactionStatus @default(PENDING)
+  sender            Account           @relation("Sender", fields: [senderAccountId], references: [id])
+  receiver          Account           @relation("Receiver", fields: [receiverAccountId], references: [id])
+  createdAt         DateTime          @default(now())
+
+  @@index([senderAccountId])
+  @@index([receiverAccountId])
+  @@index([status])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  title     String
+  message   String
+  type      NotificationType
+  isRead    Boolean          @default(false)
+  userId    String
+  user      User             @relation(fields: [userId], references: [id])
+  createdAt DateTime         @default(now())
+
+  @@index([userId])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String
+  entity    String
+  entityId  String
+  oldData   Json?
+  newData   Json?
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([entity])
+  @@index([action])
+}
+
+model IdempotencyKey {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  userId    String
+  endpoint  String
+  response  Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}

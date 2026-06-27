@@ -1,0 +1,62 @@
+name: SecureBank CI Pipeline
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run Tests
+        run: npm test
+    
+  sonar:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sonar Scan
+        run: |
+          echo "Run SonarQube analysis here"
+
+  snyk:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Snyk
+        run: npm install -g snyk
+
+      - name: Test Dependencies
+        run: snyk test
+
+  trivy:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker Image
+        run: docker build -t securebank .
+
+      - name: Scan Image with Trivy
+        run: |
+          docker run aquasec/trivy image securebank
