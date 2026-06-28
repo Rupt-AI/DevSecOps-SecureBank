@@ -53,4 +53,4 @@ app.use("/api/v1/notifications", notificationRoutes);
 
 app.use(errorMiddleware);
 
-module.exports = app;
+module.exports = app;const password = "SuperSecret123";
