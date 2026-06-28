@@ -1,0 +1,17 @@
+name: Security Pipeline
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - staging
+      - main
+jobs:
+
+  gitleaks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: gitleaks/gitleaks-action@v2
